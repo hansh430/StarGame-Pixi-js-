@@ -7,12 +7,15 @@ import {
   TextStyle
 } from "pixi.js";
 
-import { checkCollision, resetStar } from "./utils";
+import {FallingItem,FallingType, checkCollision, resetItem } from "./utils";
 
 export async function startGame(app: Application) {
 
   let score = 0;
-  const fallSpeed = 6;
+  let baseFallSpeed = 4;
+  const Max_ITEMS=8;
+
+  const starTexture = await Assets.load("/assets/star.png");
 
  
   // Basket
@@ -24,14 +27,6 @@ export async function startGame(app: Application) {
   basket.y = app.screen.height - 80;
   app.stage.addChild(basket);
 
-  // Star
-  const star = new Sprite(
-    await Assets.load("/assets/star.png")
-  );
-  star.anchor.set(0.5);
-  star.scale.set(0.7);
-  resetStar(star, app);
-  app.stage.addChild(star);
 
   // Score Text
   const scoreText = new Text({
@@ -45,6 +40,30 @@ export async function startGame(app: Application) {
   scoreText.x = 20;
   scoreText.y = 20;
   app.stage.addChild(scoreText);
+
+  //------Object Pooling  ---------//
+
+  const pool:FallingItem[]=[];
+  
+  for(let i=0; i<Max_ITEMS;i++){
+    const sprite= new Sprite(starTexture);
+    sprite.anchor.set(0.5);
+    sprite.scale.set(0.7);
+
+    const type:FallingType=Math.random()>0.5?"BOMB":"STAR";
+
+    if(type==="BOMB")
+        sprite.tint=0xff0000;
+
+    const item: FallingItem={
+        sprite,
+        type,
+        speed:baseFallSpeed
+    }
+    resetItem(item,app);
+    pool.push(item);
+    app.stage.addChild(sprite);
+  }
 
   // Keyboard input-- move the basket:
 
@@ -76,24 +95,37 @@ function MoveBasket(){
   basket.width / 2,
   Math.min(app.screen.width - basket.width / 2, basket.x)
 );
+
+}
+
+function MoveItem(){
+     for(const item of pool){
+        item.sprite.y+=item.speed;
+        if(checkCollision(basket,item.sprite)){
+            if(item.type==="BOMB"){
+                gameOver(app,score);
+                return;
+            }
+            score++;
+            scoreText.text=`Score: ${score}`;
+
+            if(score%5===0){
+                baseFallSpeed+=0.5;
+            }
+            resetItem(item,app);
+        }
+        if(item.sprite.y>app.screen.height){
+            resetItem(item,app);
+        }
+    }
 }
 
   // Game Loop
   app.ticker.add(() => {
 
     MoveBasket();
-    
-    star.y += fallSpeed;
-
-    if (checkCollision(basket, star)) {
-      score++;
-      scoreText.text = `Score: ${score}`;
-      resetStar(star, app);
-    }
-
-    if (star.y > app.screen.height) {
-      gameOver(app, score);
-    }
+    MoveItem();
+   
   });
 }
 

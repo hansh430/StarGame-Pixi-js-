@@ -1,9 +1,17 @@
 
-import { Sprite, Application } from "pixi.js";
+import { Sprite, Application, matrixPool } from "pixi.js";
 
-export function resetStar(star: Sprite, app: Application) {
-  star.x = Math.random() * app.screen.width;
-  star.y = -50;
+export type FallingType="STAR" | "BOMB";
+
+export interface FallingItem{
+  sprite: Sprite;
+  type: FallingType;
+  speed: number;
+}
+export function resetItem(item: FallingItem, app: Application) {
+  item.sprite.x=Math.random()*app.screen.width;
+  item.sprite.y=-Math.random()*app.screen.height;
+  item.speed=4+Math.random()*4;
 }
 
 export function checkCollision(a: Sprite, b: Sprite): boolean {
